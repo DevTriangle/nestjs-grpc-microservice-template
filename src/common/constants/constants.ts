@@ -13,6 +13,6 @@ export enum DefaultPaginationEnum {
 }
 
 export enum DatabaseErrorCodes {
-  UNIQUE = 'P2002',
-  FK = 'P2003',
+  FK = '23503',
+  UNIQUE = '23505',
 }
