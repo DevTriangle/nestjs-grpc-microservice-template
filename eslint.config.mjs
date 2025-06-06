@@ -11,6 +11,9 @@ export default tseslint.config(
   eslint.configs.recommended,
   tseslint.configs.strictTypeChecked,
   tseslint.configs.stylisticTypeChecked,
+
+  sonarjs.configs.recommended,
+  eslintNestJs.configs.flatRecommended,
   {
     languageOptions: {
       globals: {
@@ -40,8 +43,7 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/restrict-template-expressions': 'off',
+      '@darraghor/nestjs-typed/controllers-should-supply-api-tags': 'off', // microservices without swagger
     },
   },
-  sonarjs.configs.recommended,
-  eslintNestJs.configs.flatRecommended,
 )
