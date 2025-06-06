@@ -5,6 +5,7 @@ import { BadRequestException, ValidationError, ValidationPipe } from '@nestjs/co
 import { formatConstraints } from './common/utils/format-constraints'
 import { AppLogger } from './modules/app/app-logger'
 import { join } from 'path'
+import { ReflectionService } from '@grpc/reflection'
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(AppModule, {
@@ -14,6 +15,9 @@ async function bootstrap(): Promise<void> {
       package: ['main'],
       protoPath: [join(__dirname, './proto/main.proto')],
       url: process.env.GRPC_HOST,
+      onLoadPackageDefinition: (pkg, server) => {
+        new ReflectionService(pkg).addToServer(server)
+      },
     },
   })
 
