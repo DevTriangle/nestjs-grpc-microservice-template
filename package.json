@@ -23,7 +23,7 @@
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d ./dist/config/migrations-data-source.js",
     "migration:generate": "npm run typeorm migration:generate ./src/db/migrations/%npm_config_name%",
     "migration:create": "npx typeorm migration:create ./src/db/migrations/%npm_config_name%",
-    "proto:generate": "proto-loader-gen-types --longs=String --enums=String --defaults --oneofs --grpcLib=@grpc/grpc-js --outDir=src/proto/types/ src/proto/api.proto"
+    "proto:generate": "protoc --plugin=protoc-gen-ts_proto=\".\\node_modules\\.bin\\protoc-gen-ts_proto.cmd\" --ts_proto_out=./src/proto/types --ts_proto_opt=nestJs=true --proto_path=./src/proto ./src/proto/*.proto"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.13.4",
@@ -41,7 +41,8 @@
     "nestjs-i18n": "^10.5.1",
     "pg": "^8.16.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "ts-proto": "^2.7.2"
   },
   "devDependencies": {
     "@darraghor/eslint-plugin-nestjs-typed": "^6.6.0",

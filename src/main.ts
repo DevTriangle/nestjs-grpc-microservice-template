@@ -15,6 +15,13 @@ async function bootstrap(): Promise<void> {
       package: ['main'],
       protoPath: [join(__dirname, './proto/main.proto')],
       url: process.env.GRPC_HOST,
+      loader: {
+        keepCase: true,
+        longs: String,
+        enums: String,
+        defaults: true,
+        oneofs: true,
+      },
       onLoadPackageDefinition: (pkg, server) => {
         new ReflectionService(pkg).addToServer(server)
       },

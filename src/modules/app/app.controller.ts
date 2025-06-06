@@ -1,12 +1,12 @@
 import { Controller } from '@nestjs/common'
 import { AppService } from './app.service'
 import { ApiTags } from '@nestjs/swagger'
+import { AppServiceController, ServiceStatus } from 'src/proto/types/main'
 import { GrpcMethod } from '@nestjs/microservices'
-import { ServiceStatus } from 'src/proto/types/main/ServiceStatus'
 
 @ApiTags('App')
 @Controller('app')
-export class AppController {
+export class AppController implements AppServiceController {
   constructor(private readonly appService: AppService) {}
 
   @GrpcMethod('AppService', 'GetStatus')
