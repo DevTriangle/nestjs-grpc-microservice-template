@@ -6,7 +6,7 @@ import sonarjs from 'eslint-plugin-sonarjs'
 
 export default tseslint.config(
   {
-    ignores: ['dist/**/*.ts', 'dist/**', '**/*.mjs', 'eslint.config.mjs'],
+    ignores: ['dist/**/*.ts', 'dist/**', 'src/proto/types/**', '**/*.mjs', 'eslint.config.mjs'],
   },
   eslint.configs.recommended,
   tseslint.configs.strictTypeChecked,

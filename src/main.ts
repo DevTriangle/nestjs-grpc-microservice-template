@@ -4,14 +4,18 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices'
 import { BadRequestException, ValidationError, ValidationPipe } from '@nestjs/common'
 import { formatConstraints } from './common/utils/format-constraints'
 import { AppLogger } from './modules/app/app-logger'
+import { join } from 'path'
 
 async function bootstrap(): Promise<void> {
-  // const configService = app.get(ConfigService)
-  // const port = configService.get('port')
-
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(AppModule, {
     logger: process.env.DISABLE_LOGGER === 'true' ? undefined : new AppLogger(),
-    transport: Transport.TCP,
+    transport: Transport.GRPC,
+    options: {
+      package: ['main'],
+      protoPath: [join(__dirname, './proto/main.proto')],
+      url: process.env.GRPC_HOST,
+      protoLoader: '@grpc/proto-loader',
+    },
   })
 
   app.useGlobalPipes(

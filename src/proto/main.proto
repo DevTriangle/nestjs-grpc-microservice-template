@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+import "common.proto";
+
+package main;
+
+service AppService {
+  rpc GetStatus (Empty) returns (ServiceStatus) {}
+}
+
+message ServiceStatus {
+  bool status = 1;
+}

@@ -5,6 +5,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { I18nModule, AcceptLanguageResolver } from 'nestjs-i18n'
 import configuration from 'src/config/configuration'
 import { TypeOrmModule } from '@nestjs/typeorm'
+import { APP_GUARD } from '@nestjs/core'
+import { ServiceTokenGuard } from 'src/guards/service-token.guard'
 
 @Module({
   imports: [
@@ -42,6 +44,12 @@ import { TypeOrmModule } from '@nestjs/typeorm'
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ServiceTokenGuard,
+    },
+  ],
 })
 export class AppModule {}

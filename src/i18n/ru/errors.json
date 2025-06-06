@@ -1,5 +1,6 @@
 {
   "error": "Ошибка выполнения запроса (ID: {id})",
+  "service_auth_error": "Ошибка авторизации сервиса!",
   "internal_server_error": "Ошибка",
   "throttler_exception": "Слишком много запросов!",
 
