@@ -14,7 +14,6 @@ async function bootstrap(): Promise<void> {
       package: ['main'],
       protoPath: [join(__dirname, './proto/main.proto')],
       url: process.env.GRPC_HOST,
-      protoLoader: '@grpc/proto-loader',
     },
   })
 
