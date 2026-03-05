@@ -1,3 +1,4 @@
+export const SERVICE_NAME = 'NOTIFICATION'
 export const SortDirections = ['ASC', 'DESC']
 
 export enum ErrorLevels {
@@ -15,4 +16,11 @@ export enum DefaultPaginationEnum {
 export enum DatabaseErrorCodes {
   FK = '23503',
   UNIQUE = '23505',
+}
+
+export enum ErrorCodes {
+  NO_METADATA = 1,
+  NO_TOKEN = 2,
+  SIGNATURE_EXPIRED = 3,
+  WRONG_SIGNATURE = 4,
 }

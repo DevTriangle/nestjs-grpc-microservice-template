@@ -1,3 +1,5 @@
+import { Metadata } from '@grpc/grpc-js'
+
 export class ExceptionModel {
   error: string
   level?: string
@@ -11,10 +13,16 @@ export class ExceptionMessageModel {
   property?: string
   detailed_info?: string
 }
+
 export class ErrorResponse {
   message: string
   url: string
   method: string
   errors: ExceptionMessageModel[]
   statusCode: number
+}
+
+export class RpcErrorResponse {
+  message: string
+  metadata: Metadata
 }

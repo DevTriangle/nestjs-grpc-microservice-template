@@ -1,8 +1,11 @@
-import { Metadata, MetadataValue } from '@grpc/grpc-js'
+import { Metadata } from '@grpc/grpc-js'
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { RpcException } from '@nestjs/microservices'
+import { createHmac } from 'crypto'
 import { I18nService } from 'nestjs-i18n'
+import { ErrorCodes, SERVICE_NAME } from 'src/common/constants/constants'
+import { validateSignatureTimestamp } from 'src/common/utils/crypto/validate-signature'
 
 @Injectable()
 export class ServiceTokenGuard implements CanActivate {
@@ -25,11 +28,26 @@ export class ServiceTokenGuard implements CanActivate {
       })
     }
 
-    const secret: MetadataValue[] = metadata.get('x-internal-secret')
-    if (secret[0] !== this.config.get('service_token')) {
+    return this.validateSignature(metadata)
+  }
+
+  private validateSignature(metadata: Metadata): boolean {
+    const serviceToken = this.config.get('service_token')
+    if (!serviceToken) return false
+
+    const receivedSignature = metadata.get('x-signature')[0].toString()
+    const timestamp = metadata.get('x-timestamp')[0].toString()
+    const expectedSignature = createHmac('sha256', serviceToken)
+      .update(`${SERVICE_NAME}:${timestamp}`)
+      .digest('hex')
+    validateSignatureTimestamp(parseInt(timestamp), this.i18n)
+
+    if (receivedSignature !== expectedSignature) {
       throw new RpcException({
         code: 16,
-        message: this.i18n.t('errors.service_auth_error'),
+        message: this.i18n.t('errors.service_auth_error', {
+          args: { error: ErrorCodes.WRONG_SIGNATURE },
+        }),
       })
     }
 
