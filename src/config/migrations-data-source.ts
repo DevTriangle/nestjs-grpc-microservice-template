@@ -13,5 +13,4 @@ export const MigrationsDataSource = new DataSource({
   entities: ['dist/modules/**/entities/*.entity{.ts,.js}'],
   migrations: ['dist/db/migrations/*{.ts,.js}'],
   migrationsTableName: 'migrations',
-  synchronize: true,
 })

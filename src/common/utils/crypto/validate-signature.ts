@@ -9,7 +9,7 @@ export function validateSignatureTimestamp(timestamp: number, i18n: I18nService)
   if (Math.abs(now - timestamp) > MAX_TIME_DIFF_MS) {
     throw new RpcException({
       code: 16,
-      message: i18n.t('errors.service_auth_error', {
+      message: i18n.t('errors.auth.service_error', {
         args: { error: ErrorCodes.SIGNATURE_EXPIRED },
       }),
     })

@@ -24,7 +24,9 @@ export class ServiceTokenGuard implements CanActivate {
     if (!metadata) {
       throw new RpcException({
         code: 16,
-        message: this.i18n.t('errors.service_auth_error'),
+        message: this.i18n.t('errors.auth.service_error', {
+          args: { error: ErrorCodes.NO_METADATA },
+        }),
       })
     }
 
@@ -45,7 +47,7 @@ export class ServiceTokenGuard implements CanActivate {
     if (receivedSignature !== expectedSignature) {
       throw new RpcException({
         code: 16,
-        message: this.i18n.t('errors.service_auth_error', {
+        message: this.i18n.t('errors.auth.service_error', {
           args: { error: ErrorCodes.WRONG_SIGNATURE },
         }),
       })
