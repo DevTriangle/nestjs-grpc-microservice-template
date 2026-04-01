@@ -4,16 +4,21 @@ import { MicroserviceOptions, Transport } from '@nestjs/microservices'
 import { BadRequestException, ValidationError, ValidationPipe } from '@nestjs/common'
 import { formatConstraints } from './common/utils/format-constraints'
 import { AppLogger } from './modules/app/app-logger'
-import { join } from 'path'
 import { ReflectionService } from '@grpc/reflection'
+import { getInitProtoFiles } from './common/utils/get-proto-files'
+import { join } from 'path'
 
 async function bootstrap(): Promise<void> {
+  const [packages, protoPath] = getInitProtoFiles({
+    dirPath: './libs/asur-task-shared-types/src/proto/',
+  })
+
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(AppModule, {
     logger: process.env.DISABLE_LOGGER === 'true' ? undefined : new AppLogger(),
     transport: Transport.GRPC,
     options: {
-      package: ['main'],
-      protoPath: [join(__dirname, './proto/main.proto')],
+      package: packages,
+      protoPath: protoPath,
       url: process.env.GRPC_HOST,
       loader: {
         keepCase: true,
@@ -21,6 +26,7 @@ async function bootstrap(): Promise<void> {
         enums: String,
         defaults: true,
         oneofs: true,
+        includeDirs: [join(__dirname, 'libs/asur-task-shared-types/src/proto')],
       },
       onLoadPackageDefinition: (pkg, server) => {
         new ReflectionService(pkg).addToServer(server)
