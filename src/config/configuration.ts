@@ -1,5 +1,7 @@
-export default () => ({
+export default (): Record<string, any> => ({
+  service_name: process.env.SERVICE_NAME,
   service_token: process.env.SERVICE_TOKEN,
+  service_token_max_time_diff_ms: process.env.SERVICE_TOKEN_MAX_TIME_DIFF_MS,
 
   grpc_host: process.env.GRPC_HOST,
   disable_logger: process.env.DISABLE_LOGGER,

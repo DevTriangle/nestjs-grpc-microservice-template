@@ -2,12 +2,11 @@ import { Module } from '@nestjs/common'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { ConfigModule, ConfigService } from '@nestjs/config'
-import { I18nModule, AcceptLanguageResolver } from 'nestjs-i18n'
 import configuration from 'src/config/configuration'
 import { TypeOrmModule } from '@nestjs/typeorm'
+import { AcceptLanguageResolver, I18nModule, I18nService } from 'nestjs-i18n'
+import { RpcExceptionsFilter, RpcServiceTokenGuard } from 'nestjs-typeorm-shared'
 import { APP_FILTER, APP_GUARD } from '@nestjs/core'
-import { ServiceTokenGuard } from 'src/guards/service-token.guard'
-import { AllExceptionsFilter } from 'src/common/filters/exception.filter'
 
 @Module({
   imports: [
@@ -49,11 +48,23 @@ import { AllExceptionsFilter } from 'src/common/filters/exception.filter'
     AppService,
     {
       provide: APP_GUARD,
-      useClass: ServiceTokenGuard,
+      useFactory: (i18n: I18nService, config: ConfigService): RpcServiceTokenGuard => {
+        return new RpcServiceTokenGuard(i18n, {
+          serviceToken: config.get('service_token'),
+          serviceName: config.get('service_name'),
+          maxTimeDiffMs: config.get('service_token_max_time_diff_ms'),
+        })
+      },
+      inject: [I18nService, ConfigService],
     },
     {
       provide: APP_FILTER,
-      useClass: AllExceptionsFilter,
+      useFactory: (i18n: I18nService, config: ConfigService): RpcExceptionsFilter => {
+        return new RpcExceptionsFilter(i18n, {
+          disableLogFormatting: config.get('disable_logger') === 'true',
+        })
+      },
+      inject: [I18nService, ConfigService],
     },
   ],
 })

@@ -2,11 +2,9 @@ import { NestFactory } from '@nestjs/core'
 import { AppModule } from './modules/app/app.module'
 import { MicroserviceOptions, Transport } from '@nestjs/microservices'
 import { BadRequestException, ValidationError, ValidationPipe } from '@nestjs/common'
-import { formatConstraints } from './common/utils/format-constraints'
-import { AppLogger } from './modules/app/app-logger'
 import { ReflectionService } from '@grpc/reflection'
-import { getInitProtoFiles } from './common/utils/get-proto-files'
 import { join } from 'path'
+import { AppLogger, formatErrors, getInitProtoFiles } from 'nestjs-typeorm-shared'
 
 async function bootstrap(): Promise<void> {
   const [packages, protoPath] = getInitProtoFiles({
@@ -43,15 +41,18 @@ async function bootstrap(): Promise<void> {
       whitelist: true,
       forbidNonWhitelisted: true,
       forbidUnknownValues: true,
-      exceptionFactory: (validationErrors: ValidationError[] = []) => {
+      exceptionFactory: (validationErrors: ValidationError[] = []): BadRequestException => {
         try {
-          const formattedErrors = formatConstraints(validationErrors)
+          const formattedErrors = formatErrors(validationErrors)
 
           return new BadRequestException(formattedErrors, {
             description: 'errors.bad_request',
           })
         } catch (error) {
           console.log(error)
+          return new BadRequestException([], {
+            description: 'errors.bad_request',
+          })
         }
       },
     }),
