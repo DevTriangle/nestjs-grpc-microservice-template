@@ -1,0 +1,71 @@
+---
+description: Generate/update NestJS response files from local module entity fields only
+globs: *.response.ts
+alwaysApply: false
+---
+
+# NestJS Response Generation Pattern
+
+Use this as the canonical pattern when creating or updating `response/*.response.ts`. Do not inspect any files except entity in the same module.
+
+## Source of truth
+
+- Read fields only from `src/modules/<module>/entities/*.entity.ts` in the same module.
+- Include scalar entity columns in `<Module>Response`.
+- Exclude collection relations (`OneToMany` arrays) from base response by default.
+- Include single-object relations (`ManyToOne`/self relation) as optional nested response fields when present.
+
+## Required file shape
+
+- Import `PaginationResponse`, `StatusResponse`, `ApiProperty`.
+- Export exactly these classes:
+  - `<Module>Response`
+  - `Array<Module>Response extends PaginationResponse` with `data?: <Module>Response[]`
+  - `Status<Module>Response extends StatusResponse` with `data?: <Module>Response`
+  - `StatusArray<Module>Response extends StatusResponse` with `data?: <Module>Response[]`
+- Use `@ApiProperty()` for required fields and `@ApiProperty({ required: false })` for optional fields.
+- Use `@ApiProperty({isArray:true, type: () => Type})` if field is array.
+
+## Golden example (order-category)
+
+```typescript
+import { PaginationResponse } from '@common/classes/pagination'
+import { StatusResponse } from '@common/classes/status'
+import { ApiProperty } from '@nestjs/swagger'
+import { BaseResponse } from '@common/classes/response'
+
+export class OrderCategoryResponse extends BaseResponse {
+  @ApiProperty()
+  category_id: number
+
+  @ApiProperty()
+  category_name: string
+
+  @ApiProperty({ required: false })
+  parent_category_id?: number
+
+  @ApiProperty({ required: false })
+  parent_category?: OrderCategoryResponse
+
+  @ApiProperty()
+  order_type_prefix: string
+
+  @ApiProperty({ required: false })
+  is_report_excluded?: boolean
+}
+
+export class ArrayOrderCategoryResponse extends PaginationResponse {
+  @ApiProperty({ required: false, isArray: true, type: OrderCategoryResponse })
+  data?: OrderCategoryResponse[]
+}
+
+export class StatusOrderCategoryResponse extends StatusResponse {
+  @ApiProperty({ required: false })
+  data?: OrderCategoryResponse
+}
+
+export class StatusArrayOrderCategoryResponse extends StatusResponse {
+  @ApiProperty({ required: false, isArray: true, type: OrderCategoryResponse })
+  data?: OrderCategoryResponse[]
+}
+```

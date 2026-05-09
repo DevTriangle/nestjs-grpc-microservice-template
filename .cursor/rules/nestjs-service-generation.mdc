@@ -1,0 +1,118 @@
+---
+description: Generate/update NestJS services using canonical CRUD pattern
+globs: *.service.ts
+alwaysApply: false
+---
+
+# NestJS Service Generation Pattern
+
+Use this as the canonical pattern when creating or updating module services. Do not inspect other files to infer style.
+
+## Required Service Structure
+
+- Class uses `@Injectable()`.
+- Constructor injects repository, `I18nService`, and `DataSource` in that order when query/transaction access is needed.
+- Use `createQueryBuilder()` for create/update/delete and `getExists`.
+- Use `formatEntityFilters({ filter })` + repository `findAndCount` for list methods.
+- Include `findOne` helper with `{ id, select, relations }`; throw `HttpException(i18n key, NOT_FOUND)` when missing.
+- Return typed response wrappers from `response/*.response.ts`.
+- Create bulkCreate() method only if requested.
+- Create DTO `*.dto.ts` files if needed (follow nestjs-dto-generation.mdc rule)
+- Create filter `*.filter.ts` files if needed (follow nestjs-filter-generation.mdc rule)
+- Create response `*.response.ts` files if needed (follow nestjs-response-generation.mdc rule)
+
+## Canonical Service Template
+
+```typescript
+import { formatEntityFilters } from '@common/utils/database/format-entity-filter'
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
+import { I18nService } from 'nestjs-i18n'
+import { DataSource, FindOptionsSelect, FindOptionsRelations, QueryRunner } from 'typeorm'
+import { CreateOrderCategoryDto } from './dto/create.dto'
+import { UpdateOrderCategoryDto } from './dto/update.dto'
+import { OrderCategoryRepository, OrderCategory } from './entities/order-category.entity'
+import {
+  StatusOrderCategoryResponse,
+  OrderCategoryResponse,
+  ArrayOrderCategoryResponse,
+} from './response/order-category.response'
+import { OrderCategoryFilter } from './filters/order-category.filter'
+import { useTransaction } from '@common/utils/database/transaction'
+
+@Injectable()
+export class <ModuleService> {
+  constructor(
+    private readonly <moduleRepository>: <ModuleRepository>,
+    private readonly i18n: I18nService,
+    private readonly dataSource: DataSource,
+  ) {}
+
+  async create(
+    data: CreateOrderCategoryDto,
+    qRunner?: QueryRunner,
+  ): Promise<StatusOrderCategoryResponse> {
+    return await useTransaction(this.dataSource, qRunner, async (queryRunner) => {
+      const {raw: [createResult]}: { raw: OrderCategoryResponse[] } = await this.orderCategoryRepository
+        .createQueryBuilder()
+        .setQueryRunner(queryRunner).useTransaction(true)
+        .insert().values(data)
+        .returning('*').execute()
+
+      return { status: !!createResult, data: createResult }
+    })
+  }
+
+  async bulkCreate(
+    data: CreateOrderCategoryDto[],
+    qRunner?: QueryRunner,
+  ): Promise<StatusArrayOrderCategoryResponse> {
+    return await useTransaction(this.dataSource, qRunner, async (queryRunner) => {
+      const { raw: createResult }: { raw: OrderCategoryResponse[] } =
+        await this.orderCategoryRepository
+          .createQueryBuilder()
+          .setQueryRunner(queryRunner).useTransaction(true)
+          .insert().values(data).execute()
+
+      return { status: !!createResult, data: createResult }
+    })
+  }
+
+  async findAll(filter?: <Module>Filter): Promise<Array<Module>Response> {
+    const { count, offset, filters } = formatEntityFilters({ filter })
+    const [rows, total] = await this.<moduleRepository>.findAndCount({
+      where: filters,
+      order: filter?.sorts,
+      skip: offset,
+      take: count,
+    })
+    return { count: total, data: rows }
+  }
+
+  async findOne({ id, select = {}, relations = {} }: { id: number; select?: FindOptionsSelect<<ModuleEntity>>; relations?: FindOptionsRelations<<ModuleEntity>> }): Promise<<Module>Response> {
+    const row = await this.<moduleRepository>.findOne({ select: { <id_field>: true, ...select }, relations, where: { <id_field>: id } })
+    if (!row) throw new HttpException(this.i18n.t('errors.<module>.not_found'), HttpStatus.NOT_FOUND)
+    return row
+  }
+
+  async update(
+    data: UpdateOrderCategoryDto,
+    qRunner?: QueryRunner,
+  ): Promise<StatusOrderCategoryResponse> {
+    return await useTransaction(this.dataSource, qRunner, async (queryRunner) => {
+      const updateResult = await this.orderCategoryRepository
+        .createQueryBuilder().setQueryRunner(queryRunner).useTransaction(true).update().where({ category_id: data.category_id }).set(data).execute()
+
+      return { status: (updateResult.affected ?? 0) > 0 }
+    })
+  }
+
+  async delete(id: number, qRunner?: QueryRunner): Promise<StatusOrderCategoryResponse> {
+    return await useTransaction(this.dataSource, qRunner, async (queryRunner) => {
+      const deleteResult = await this.orderCategoryRepository
+        .createQueryBuilder().setQueryRunner(queryRunner).useTransaction(true).softDelete().where({ category_id: id }).execute()
+
+      return { status: (deleteResult.affected ?? 0) > 0 }
+    })
+  }
+}
+```

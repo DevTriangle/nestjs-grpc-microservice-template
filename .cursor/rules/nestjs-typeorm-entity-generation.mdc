@@ -1,0 +1,80 @@
+---
+description: NestJS TypeORM entity creation standard with complete self-contained example
+globs: *.entity.ts
+alwaysApply: false
+---
+
+# NestJS TypeORM Entity Generation
+
+When creating or updating an entity file, follow this exact structure. Do not inspect other files for style decisions.
+
+## Required pattern
+
+- Use `import BaseModel from '@common/classes/model'`.
+- Keep all TypeORM imports from `typeorm` in one grouped import.
+- Add `@Entity({ name: '<table_name>' })`. Table name should be plural in snake case.
+- Entity class must extend `BaseModel`.
+- Use explicit decorators for every field (`@PrimaryColumn`, `@Column`, `@ManyToOne`, `@OneToMany`, `@JoinColumn`).
+- For FK scalar fields, define `@Column({ foreignKeyConstraintName: 'FK_...' })` and matching `@JoinColumn` on relation.
+- Add `@Injectable()` repository in the same file.
+- Repository must extend `Repository<EntityName>`, call `super(EntityName, dataSource.createEntityManager())`, and override `createQueryBuilder` to return typed query-builder.
+- Primary column is increment for reference/enum tables and uuid v7 (`@PrimaryColumn({ type: 'uuid', default: () => UUIDV7_FUNC })`) for other.
+
+## Golden example (copy this shape)
+
+```typescript
+import BaseModel from '@common/classes/model'
+import { Injectable } from '@nestjs/common'
+import {
+  Entity,
+  Repository,
+  DataSource,
+  QueryRunner,
+  PrimaryColumn,
+  Column,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm'
+import { ExampleQueryBuilder } from '../query-builders/example.qb'
+import { ForeignEntity } from '@modules/foreign/entities/foreign.entity'
+import { ChildEntity } from '@modules/child/entities/child.entity'
+
+@Entity({ name: 'example_entities' })
+export class ExampleEntity extends BaseModel {
+  @PrimaryColumn({ generated: 'increment', generatedIdentity: 'BY DEFAULT' })
+  <example_entity>_id: number
+
+  @Column()
+  <example_entity>_name: string
+
+  @Column({ nullable: true, foreignKeyConstraintName: 'FK_foreign_id' })
+  foreign_id?: number
+
+  @ManyToOne(() => ForeignEntity, (parent) => parent.examples, {
+    onUpdate: 'CASCADE',
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({
+    name: 'foreign_id',
+    referencedColumnName: 'foreign_id',
+    foreignKeyConstraintName: 'FK_foreign_id',
+  })
+  foreign?: ForeignEntity
+
+  @OneToMany(() => ChildEntity, (child) => child.example)
+  children?: ChildEntity[]
+}
+
+@Injectable()
+export class ExampleEntityRepository extends Repository<ExampleEntity> {
+  constructor(private dataSource: DataSource) {
+    super(ExampleEntity, dataSource.createEntityManager())
+  }
+
+  override createQueryBuilder(alias?: string, queryRunner?: QueryRunner): ExampleQueryBuilder {
+    const queryBuilder = super.createQueryBuilder(alias, queryRunner)
+    return new ExampleQueryBuilder(queryBuilder)
+  }
+}
+```
