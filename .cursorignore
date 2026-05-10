@@ -3,3 +3,4 @@ dist/
 node_modules/
 src/db/migrations/
 .env
+package-lock.json
