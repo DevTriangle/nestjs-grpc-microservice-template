@@ -75,6 +75,11 @@ message OrderFilter {
   optional OrderSorts sorts = 2;
   optional OrderFilters filter = 3;
 }
+
+// DTO для поиска по ID задачи
+message OrderUniqueParams {
+  string id = 1; // ID задачи
+}
 ```
 
 ### `model.proto`
