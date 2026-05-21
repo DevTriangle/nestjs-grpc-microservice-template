@@ -1,0 +1,155 @@
+---
+description: Structure and naming for NestJS gRPC .proto files
+globs: *.proto
+alwaysApply: false
+---
+
+# NestJS proto module layout (`src/proto/<module>/`)
+
+When adding or editing protos. One folder per module, **four files** with fixed roles. Take required data from module that mentioned in request.
+
+## Files (required split)
+
+- `manage.proto` Write create/update/other DTO: `{Entity}Request`. Take data from given module in request.
+- `filter.proto` Write filters for the entity from given module in request: `{Entity}Sorts`, `{Entity}Filters`, `{Entity}Filter`.
+- `model.proto` Write entity model from given module in request: `{Entity}Model`.
+- `service.proto` Write rpc requests (in nestjs api controllers): `service {Entity}Service`, imports **`common/model.proto`**, **`{module}/filter.proto`**, **`{module}/manage.proto`**, **`{module}/model.proto`** in that order.
+
+## Conventions
+
+- **`syntax = "proto3";`** and **`package`** equals the directory name (`order`, `parent_task`, `order_status`, …).
+- **Imports**: path from proto root, e.g. `"common/model.proto"`, `"order/model.proto"`. No leading slash.
+- **Service RPCs** (align with `order` unless product requires fewer): `Create({Entity}Request) → Status{Entity}Response`, `FindAll({Entity}Filter) → Array{Entity}Response`, `GetOne(common.FindUniqueRequest) → {Entity}Model`, `Update({Entity}Request) → common.StatusResponse`.
+- **Comments**: Russian brief description above `service`, RPCs, and main messages (same style as existing protos).
+- **Field numbers**: unique per message, sequential from 1.
+- **Field order**: the most important and used fields must be first.
+
+## Example: `src/proto/order/`
+
+### `manage.proto`
+
+```protobuf
+syntax = "proto3";
+
+package order;
+
+import "google/protobuf/timestamp.proto";
+
+// DTO для задачи (Order)
+message OrderRequest {
+  optional string id = 1;
+  optional string task_id = 2;
+  optional string order_type_prefix = 3;
+  optional string order_name = 4;
+  optional string order_description = 5;
+  optional int32 category_id = 6;
+  optional string executor_id = 7;
+  optional string facility_id = 8;
+  optional google.protobuf.Timestamp date_start = 9;
+  optional google.protobuf.Timestamp date_end = 10;
+}
+```
+
+### `filter.proto`
+
+```protobuf
+syntax = "proto3";
+
+package order;
+
+import "common/model.proto";
+
+// Сортировка задачи
+message OrderSorts {
+  optional common.SortOrders id = 1;
+}
+
+// Фильтры задачи
+message OrderFilters {
+  optional string id = 1;
+}
+
+// DTO поиска задач
+message OrderFilter {
+  optional common.FilterOffset offset = 1;
+  optional OrderSorts sorts = 2;
+  optional OrderFilters filter = 3;
+}
+```
+
+### `model.proto`
+
+```protobuf
+syntax = "proto3";
+
+package order;
+
+import "category/model.proto";
+import "common/model.proto";
+import "google/protobuf/timestamp.proto";
+import "order_status/model.proto";
+import "order_type/model.proto";
+import "task/model.proto";
+
+// Задача
+message OrderModel {
+  string id = 1;
+  string task_id = 2;
+  string order_type_prefix = 3;
+  int32 order_id = 4;
+  string order_name = 5;
+  string order_description = 6;
+  int32 category_id = 7;
+  string executor_id = 8;
+  string facility_id = 9;
+  int32 order_status_id = 10;
+  google.protobuf.Timestamp date_start = 11;
+  google.protobuf.Timestamp date_end = 12;
+
+  optional task.TaskModel task = 13;
+  optional order_type.OrderTypeModel order_type = 14;
+
+  optional category.CategoryModel category = 15;
+  optional order_status.OrderStatusModel order_status = 16;
+}
+
+// Ответ с пагинацией
+message ArrayOrderResponse {
+  common.PaginationResponse pagination = 1;
+  repeated OrderModel data = 2;
+}
+
+// Статус
+message StatusOrderResponse {
+  common.StatusResponse status = 1;
+  optional OrderModel data = 2;
+}
+```
+
+### `service.proto`
+
+```protobuf
+syntax = "proto3";
+
+package order;
+
+import "common/model.proto";
+import "order/filter.proto";
+import "order/manage.proto";
+import "order/model.proto";
+
+// Сервис задач (Order)
+service OrderService {
+  // Создание задач
+  rpc Create(OrderRequest) returns (StatusOrderResponse) {}
+
+  // Получение списка задач
+  rpc FindAll(OrderFilter) returns (ArrayOrderResponse) {}
+
+  // Получение задачи по ID
+  rpc GetOne(common.FindUniqueRequest) returns (OrderModel) {}
+
+  // Изменение задач
+  rpc Update(OrderRequest) returns (common.StatusResponse) {}
+}
+```

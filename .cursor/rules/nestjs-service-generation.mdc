@@ -20,11 +20,12 @@ Use this as the canonical pattern when creating or updating module services. Do 
 - Create DTO `*.dto.ts` files if needed (follow nestjs-dto-generation.mdc rule)
 - Create filter `*.filter.ts` files if needed (follow nestjs-filter-generation.mdc rule)
 - Create response `*.response.ts` files if needed (follow nestjs-response-generation.mdc rule)
+- Service methods for create, update and delete should use useTransaction method.
 
 ## Canonical Service Template
 
 ```typescript
-import { formatEntityFilters } from '@common/utils/database/format-entity-filter'
+import { formatEntityFilters } from 'nestjs-typeorm-shared'
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
 import { I18nService } from 'nestjs-i18n'
 import { DataSource, FindOptionsSelect, FindOptionsRelations, QueryRunner } from 'typeorm'
@@ -37,7 +38,7 @@ import {
   ArrayOrderCategoryResponse,
 } from './response/order-category.response'
 import { OrderCategoryFilter } from './filters/order-category.filter'
-import { useTransaction } from '@common/utils/database/transaction'
+import { useTransaction } from 'nestjs-typeorm-shared'
 
 @Injectable()
 export class <ModuleService> {

@@ -24,7 +24,7 @@ Use this as the canonical pattern when creating or updating DTO files inside `sr
 ## Required Imports Pattern
 
 ```typescript
-import { ValidationErrors } from '@common/constants/validation'
+import { ValidationErrors } from 'nestjs-typeorm-shared'
 import { ApiProperty, PartialType } from '@nestjs/swagger'
 import { Transform } from 'class-transformer'
 import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator'

@@ -10,7 +10,7 @@ Use this as the canonical pattern when creating/updating API controllers. Do not
 
 ## Required Structure
 
-- Class decorators order: `@ApiTags` -> `@Controller(AppRoutesEnum.<ROUTE>)` -> `@UseFilters(AllExceptionsFilter)`.
+- Class decorators order: `@ApiTags` -> `@Controller(AppRoutesEnum.<ROUTE>)`.
 - Constructor injects module service first, others next and `CacheService` last.
 - Handlers stay thin: call service, clear cache on mutations, return typed response.
 - Create DTO `*.dto.ts` files if needed (follow nestjs-dto-generation.mdc rule)
@@ -29,7 +29,6 @@ Use this as the canonical pattern when creating/updating API controllers. Do not
 ```typescript
 @ApiTags('<Plural Name>')
 @Controller(AppRoutesEnum.<MODULE_ROUTE>)
-@UseFilters(AllExceptionsFilter)
 export class <ModuleController> {
   constructor(
     private readonly <moduleService>: <ModuleService>,

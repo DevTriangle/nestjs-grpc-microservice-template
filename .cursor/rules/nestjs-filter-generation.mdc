@@ -57,9 +57,9 @@ import { ApiProperty } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
 import { IsBoolean, IsInt, IsOptional, IsString, ValidateNested } from 'class-validator'
 import { i18nValidationMessage } from 'nestjs-i18n'
-import { BaseFilter, BaseFilters, BaseSorts, SortOrders } from '@common/classes/filter'
-import { ValidationErrors } from '@common/constants/validation'
-import { IsSortOrder } from '@common/decorators/sort'
+import { BaseFilter, BaseFilters, BaseSorts, SortOrders } from 'nestjs-typeorm-shared'
+import { ValidationErrors } from 'nestjs-typeorm-shared'
+import { IsSortOrder } from 'nestjs-typeorm-shared'
 
 export class OrderCategorySorts extends BaseSorts {
   @IsSortOrder()
