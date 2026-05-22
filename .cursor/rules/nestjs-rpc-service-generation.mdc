@@ -1,0 +1,135 @@
+---
+description: Generate/update NestJS GRPC services using canonical CRUD pattern
+globs: *.service.ts
+alwaysApply: false
+---
+
+# NestJS GRPC service Generation Pattern
+
+Use this as the canonical pattern when creating or updating module services. Do not inspect other files to infer style.
+
+## Required Service Structure
+
+- Class uses `@Injectable()`.
+- Constructor injects repository, `I18nService`, and `DataSource` in that order when query/transaction access is needed.
+- Use `createQueryBuilder()` for create/update/delete and `getExists`.
+- Use `formatEntityFilters({ filter })` + repository `findAndCount` for list methods.
+- Include `findOne` helper with `{ id, select, relations }`; throw `HttpException(i18n key, NOT_FOUND)` when missing.
+- Create bulkCreate() method only if requested.
+- Create DTO `*.dto.ts` files if needed (follow nestjs-rpc-dto-generation.mdc rule)
+- Create filter `*.filter.ts` files if needed (follow nestjs-rpc-filter-generation.mdc rule)
+- Service methods for create, update and delete should use useTransaction method.
+
+## Canonical Service Template
+
+```typescript
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
+import { I18nService } from 'nestjs-i18n'
+import { formatEntityFilters, useTransaction, RpcAuthData, objectIsEmpty, StatusResponse } from 'nestjs-typeorm-shared'
+import { DataSource, FindOptionsRelations, FindOptionsSelect, FindOptionsWhere, IsNull, QueryRunner } from 'typeorm'
+import { KnowledgeGroup, KnowledgeGroupRepository } from './entities/knowledge-group.entity'
+import { CreateKnowledgeGroupDto } from '@shared/classes/knowledge-group/dto/create.dto'
+import {
+  ArrayKnowledgeGroupResponse,
+  KnowledgeGroupModel,
+  StatusKnowledgeGroupResponse,
+} from '@shared/generated/knowledge_group/model'
+import { KnowledgeGroupFilterDto } from '@shared/classes/knowledge-group/filters/knowledge-group.filter'
+import { UpdateKnowledgeGroupDto } from '@shared/classes/knowledge-group/dto/update.dto'
+import { KnowledgePermissions } from '@shared/constants/permissions'
+
+@Injectable()
+export class KnowledgeGroupService {
+  constructor(
+    private readonly knowledgeGroupRepository: KnowledgeGroupRepository,
+    private readonly i18n: I18nService,
+    private readonly dataSource: DataSource,
+  ) {}
+
+  async create(data: CreateKnowledgeGroupDto, qRunner?: QueryRunner): Promise<StatusKnowledgeGroupResponse> {
+    return await useTransaction(this.dataSource, qRunner, async (queryRunner) => {
+      const {
+        raw: [createResult],
+      }: { raw: KnowledgeGroupModel[] } = await this.knowledgeGroupRepository
+        .createQueryBuilder()
+        .setQueryRunner(queryRunner)
+        .useTransaction(true)
+        .insert()
+        .values(data)
+        .returning('*')
+        .execute()
+
+      return { status: { status: !!createResult }, data: createResult }
+    })
+  }
+
+  async findAll(
+    filter: KnowledgeGroupFilterDto | undefined,
+    authData: RpcAuthData,
+  ): Promise<ArrayKnowledgeGroupResponse> {
+    const canGetAll = authData.is_superuser || authData.permissions.includes(KnowledgePermissions.GET_ALL)
+    const { count, offset, filters, sorts } = formatEntityFilters({ filter })
+
+    const [rows, total]: [KnowledgeGroupModel[], number] = await this.knowledgeGroupRepository
+      .createQueryBuilder('knowledge_group')
+      .where(filters)
+      .addPermissionFilter(authData.permissions, canGetAll)
+      .orderBy(sorts)
+      .skip(offset)
+      .take(count)
+      .getManyAndCount()
+
+    return { pagination: { count: total }, data: rows }
+  }
+
+  async findOne({
+    id,
+    select = {},
+    relations = {},
+  }: {
+    id: number
+    select?: FindOptionsSelect<KnowledgeGroup>
+    relations?: FindOptionsRelations<KnowledgeGroup>
+  }): Promise<KnowledgeGroupModel> {
+    const row = await this.knowledgeGroupRepository.findOne({
+      select: { knowledge_group_id: true, ...select },
+      relations,
+      where: { knowledge_group_id: id },
+    })
+    if (!row) {
+      throw new HttpException(this.i18n.t('errors.knowledge_group.not_found'), HttpStatus.NOT_FOUND)
+    }
+
+    return row
+  }
+
+  async update(data: UpdateKnowledgeGroupDto, qRunner?: QueryRunner): Promise<StatusResponse> {
+    return await useTransaction(this.dataSource, qRunner, async (queryRunner) => {
+      const updateResult = await this.knowledgeGroupRepository
+        .createQueryBuilder()
+        .setQueryRunner(queryRunner)
+        .useTransaction(true)
+        .update()
+        .where({ knowledge_group_id: data.knowledge_group_id })
+        .set(data)
+        .execute()
+
+      return { status: (updateResult.affected ?? 0) > 0 }
+    })
+  }
+
+  async delete(id: number, qRunner?: QueryRunner): Promise<StatusResponse> {
+    return await useTransaction(this.dataSource, qRunner, async (queryRunner) => {
+      const deleteResult = await this.knowledgeGroupRepository
+        .createQueryBuilder()
+        .setQueryRunner(queryRunner)
+        .useTransaction(true)
+        .softDelete()
+        .where({ knowledge_group_id: id })
+        .execute()
+
+      return { status: (deleteResult.affected ?? 0) > 0 }
+    })
+  }
+}
+```

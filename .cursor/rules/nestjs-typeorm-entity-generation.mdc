@@ -10,7 +10,7 @@ When creating or updating an entity file, follow this exact structure. Do not in
 
 ## Required pattern
 
-- Use `import BaseModel from '@common/classes/model'`.
+- Use `import {BaseModel} from 'nestjs-typeorm-shared'`.
 - Keep all TypeORM imports from `typeorm` in one grouped import.
 - Add `@Entity({ name: '<table_name>' })`. Table name should be plural in snake case.
 - Entity class must extend `BaseModel`.
@@ -23,7 +23,7 @@ When creating or updating an entity file, follow this exact structure. Do not in
 ## Golden example (copy this shape)
 
 ```typescript
-import BaseModel from '@common/classes/model'
+import {BaseModel} from 'nestjs-typeorm-shared'
 import { Injectable } from '@nestjs/common'
 import {
   Entity,

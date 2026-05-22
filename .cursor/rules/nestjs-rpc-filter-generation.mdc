@@ -1,0 +1,145 @@
+---
+description: Generate/update NestJS gRPC filter DTO classes from module filter.proto
+globs: **/filters/*.filter.ts
+alwaysApply: false
+---
+
+# NestJS gRPC Filter Generation Pattern
+
+Use this when creating or updating `filters/*.filter.ts` under `src/libs/<lib_name>/src/classes/<module>/filters/`. Do not infer field names from entities, services, or `model.proto`.
+
+## Source of truth
+
+- Read **only** from `src/libs/<lib_name>/src/proto/<module>/filter.proto`.
+- Import generated interfaces from `@generated/<module>/filter`.
+- Proto package folder uses snake_case (`knowledge_group`); class folder uses kebab-case (`knowledge-group`).
+- Do **not** add `{Entity}UniqueParams` here — that belongs in `dto/params.dto.ts`.
+
+## Required file and classes
+
+| Proto message     | Class                | Extends       |
+| ----------------- | -------------------- | ------------- |
+| `{Entity}Sorts`   | `{Entity}SortsDto`   | `BaseSorts`   |
+| `{Entity}Filters` | `{Entity}FiltersDto` | `BaseFilters` |
+| `{Entity}Filter`  | `{Entity}FilterDto`  | `BaseFilter`  |
+
+- File name: `<kebab-module>.filter.ts` (e.g. `knowledge-group.filter.ts`).
+- Export all three classes from one file.
+- Map proto field names to TypeScript **as-is** (snake_case).
+- Do **not** redeclare `offset` on `{Entity}FilterDto` — it comes from `BaseFilter` / proto `common.FilterOffset`.
+
+## Field rules
+
+### `{Entity}SortsDto`
+
+- One optional property per field in proto `{Entity}Sorts`.
+- Decorator: `@IsSortOrder()` only (no `@ApiProperty` on sort fields).
+
+### `{Entity}FiltersDto`
+
+- One optional property per field in proto `{Entity}Filters`.
+- Every field: `@IsOptional()` + `@ApiProperty({ required: false })`.
+- Use validators from the mapping table below.
+
+### `{Entity}FilterDto`
+
+- Nested `sorts` and `filter` only (match proto `{Entity}Filter` fields 2–3; skip `offset`).
+- Each nested field: `@ValidateNested()`, `@Type(() => …Dto)`, `@IsOptional()`, `@ApiProperty({ required: false })`.
+
+## Imports
+
+```typescript
+import { {Entity}Filter, {Entity}Filters, {Entity}Sorts } from '@generated/<module>/filter'
+import { ApiProperty } from '@nestjs/swagger'
+import { BaseFilter, BaseFilters, BaseSorts, IsSortOrder, SortOrders, ValidationErrors } from 'nestjs-typeorm-shared'
+import { IsInt, IsOptional, IsString, ValidateNested } from 'class-validator'
+import { i18nValidationMessage } from 'nestjs-i18n'
+import { Type } from 'class-transformer'
+```
+
+## Golden example (`knowledge_group` → `knowledge-group`)
+
+Proto (`filter.proto`):
+
+```protobuf
+message KnowledgeGroupSorts {
+  optional common.SortOrders knowledge_group_id = 1;
+  optional common.SortOrders knowledge_group_name = 2;
+  optional common.SortOrders permission = 3;
+  optional common.SortOrders parent_group_id = 4;
+}
+
+message KnowledgeGroupFilters {
+  optional int32 knowledge_group_id = 1;
+  optional string knowledge_group_name = 2;
+  optional string permission = 3;
+  optional int32 parent_group_id = 4;
+}
+
+message KnowledgeGroupFilter {
+  optional common.FilterOffset offset = 1;
+  optional KnowledgeGroupSorts sorts = 2;
+  optional KnowledgeGroupFilters filter = 3;
+}
+```
+
+### `filters/knowledge-group.filter.ts`
+
+```typescript
+import { KnowledgeGroupFilter, KnowledgeGroupFilters, KnowledgeGroupSorts } from '@generated/knowledge_group/filter'
+import { ApiProperty } from '@nestjs/swagger'
+import { BaseFilter, BaseFilters, BaseSorts, IsSortOrder, SortOrders, ValidationErrors } from 'nestjs-typeorm-shared'
+import { IsInt, IsOptional, IsString, ValidateNested } from 'class-validator'
+import { i18nValidationMessage } from 'nestjs-i18n'
+import { Type } from 'class-transformer'
+
+export class KnowledgeGroupSortsDto extends BaseSorts implements KnowledgeGroupSorts {
+  @IsSortOrder()
+  knowledge_group_id?: SortOrders
+
+  @IsSortOrder()
+  knowledge_group_name?: SortOrders
+
+  @IsSortOrder()
+  permission?: SortOrders
+
+  @IsSortOrder()
+  parent_group_id?: SortOrders
+}
+
+export class KnowledgeGroupFiltersDto extends BaseFilters implements KnowledgeGroupFilters {
+  @IsInt({ message: i18nValidationMessage(ValidationErrors.NUMBER_FORMAT) })
+  @IsOptional()
+  @ApiProperty({ required: false })
+  knowledge_group_id?: number
+
+  @IsString({ message: i18nValidationMessage(ValidationErrors.STRING_FORMAT) })
+  @IsOptional()
+  @ApiProperty({ required: false })
+  knowledge_group_name?: string
+
+  @IsString({ message: i18nValidationMessage(ValidationErrors.STRING_FORMAT) })
+  @IsOptional()
+  @ApiProperty({ required: false })
+  permission?: string
+
+  @IsInt({ message: i18nValidationMessage(ValidationErrors.NUMBER_FORMAT) })
+  @IsOptional()
+  @ApiProperty({ required: false })
+  parent_group_id?: number
+}
+
+export class KnowledgeGroupFilterDto extends BaseFilter implements KnowledgeGroupFilter {
+  @ValidateNested()
+  @Type(() => KnowledgeGroupSortsDto)
+  @IsOptional()
+  @ApiProperty({ required: false })
+  sorts?: KnowledgeGroupSortsDto
+
+  @ValidateNested()
+  @Type(() => KnowledgeGroupFiltersDto)
+  @IsOptional()
+  @ApiProperty({ required: false })
+  filter?: KnowledgeGroupFiltersDto
+}
+```

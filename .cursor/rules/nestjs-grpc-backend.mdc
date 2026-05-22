@@ -1,0 +1,41 @@
+---
+description: NestJS GRPC backend module style
+alwaysApply: true
+---
+
+# NestJS GRPC Backend Module Style
+
+Orchestrates work across the shared-types library and `src/modules`. Follow the linked RPC rules for each artifact — do not infer structure from other files.
+
+## Shared types library (`src/libs/**/`)
+
+Create or update **before** the backend module when adding a new entity.
+
+| Artifact               | Path                                                       | Rule                               |
+| ---------------------- | ---------------------------------------------------------- | ---------------------------------- |
+| Proto module (4 files) | `src/proto/<module>/`                                      | `nestjs-proto-generation.mdc`      |
+| DTOs                   | `src/classes/<module>/dto/` (`create`, `update`, `params`) | `nestjs-rpc-dto-generation.mdc`    |
+| Filters                | `src/classes/<module>/filters/<module>.filter.ts`          | `nestjs-rpc-filter-generation.mdc` |
+| Generated types        | `src/generated/<module>/`                                  | generated from proto — do not edit |
+
+- Proto folder: snake_case (`knowledge_group`). Class folder: kebab-case (`knowledge-group`).
+- Use `@shared/generated/<module>/model` for responses (`{Entity}Model`, `Array{Entity}Response`, `Status{Entity}Response`) — do not add `response/` or `*.response.ts` under `src/modules`.
+
+## Backend module (`src/modules/<module>/`)
+
+Rules for files/folder:
+
+- `entities/<module>.entity.ts` (+ repository) - `nestjs-typeorm-entity-generation.mdc`
+- `<module>.service.ts` - `nestjs-rpc-service-generation.mdc`
+- `<module>.controller.ts` - implement generated `{Entity}ServiceController` from `@shared/generated/<module>/service`; mirror existing controllers(`@*ServiceControllerMethods()`, `@RpcServiceAuth`, `@Payload()`, `@Ctx()`, `@RpcAuth()`)
+- `query-builders/` - always create the query builder for the entity (`export class KnowledgeGroupQueryBuilder extends AppQueryBuilder<KnowledgeGroup> {}`)
+- `<module>.module.ts` | register entity repository + service in `providers`; export service
+
+Imports in module code:
+
+- DTOs / filters: `@shared/classes/<kebab-module>/…`
+- gRPC models / service interfaces: `@shared/generated/<module>/…`
+
+## Database
+
+- Never create any migration files for the database.

@@ -1,0 +1,113 @@
+---
+description: Generate/update NestJS gRPC DTO classes from module proto files
+globs: **/dto/*.dto.ts
+alwaysApply: false
+---
+
+# NestJS gRPC DTO Generation Pattern
+
+Use this when creating or updating `dto/*.dto.ts` under `src/libs/<lib_name>/src/classes/<module>/dto/`. Do not infer field names from entities or services.
+
+## Source of truth
+
+- **`create.dto.ts` / `update.dto.ts`**: read fields from `src/libs/<lib_name>/src/proto/<module>/manage.proto` message `{Entity}Request`.
+- **`params.dto.ts`**: read fields from `src/libs/<lib_name>/src/proto/<module>/filter.proto` message `{Entity}UniqueParams`.
+- Import generated types from `@generated/<module>/manage` and `@generated/<module>/filter`.
+- Proto package folder uses snake_case (`knowledge_group`); class folder uses kebab-case (`knowledge-group`).
+
+## Required files
+
+| File            | Class                     | Implements                                             |
+| --------------- | ------------------------- | ------------------------------------------------------ |
+| `create.dto.ts` | `Create{Entity}Dto`       | `{Entity}Request`                                      |
+| `update.dto.ts` | `Update{Entity}Dto`       | extends `PartialType(Create{Entity}Dto)` + primary key |
+| `params.dto.ts` | `{Entity}UniqueParamsDto` | `{Entity}UniqueParams`                                 |
+
+## Field rules
+
+- Map proto field names to TypeScript **as-is** (snake_case).
+- **`create.dto.ts`**: include all `{Entity}Request` fields needed for create; **exclude** the primary id field (used only in update).
+- Mark business-required create fields with `@IsNotEmpty`; proto `optional` fields use `@IsOptional` and `@ApiProperty({ required: false })`.
+- **`update.dto.ts`**: `extends PartialType(Create{Entity}Dto)`; add primary id from `{Entity}Request` as required (`@IsInt` + `@IsNotEmpty` for numeric ids).
+- **`params.dto.ts`**: one field per `{Entity}UniqueParams`; add `@Transform((v) => Number(v.value))` for numeric query params.
+
+## Imports
+
+- `ValidationErrors` from `../../../constants/errors` in `create.dto.ts`; from `nestjs-typeorm-shared` in `update.dto.ts` and `params.dto.ts`.
+- `class-validator`, `nestjs-i18n`, `@nestjs/swagger` (`ApiProperty`, `PartialType`), `class-transformer` (`Transform`) in `params.dto.ts`.
+
+## Golden example (`knowledge_group` → `knowledge-group`)
+
+Proto (`manage.proto`):
+
+```protobuf
+message KnowledgeGroupRequest {
+  optional int32 knowledge_group_id = 1;
+  optional string knowledge_group_name = 2;
+  optional string permission = 3;
+  optional int32 parent_group_id = 4;
+}
+```
+
+### `create.dto.ts`
+
+```typescript
+import { ValidationErrors } from '../../../constants/errors'
+import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator'
+import { i18nValidationMessage } from 'nestjs-i18n'
+import { ApiProperty } from '@nestjs/swagger'
+import { KnowledgeGroupRequest } from '@generated/knowledge_group/manage'
+
+export class CreateKnowledgeGroupDto implements KnowledgeGroupRequest {
+  @IsString({ message: i18nValidationMessage(ValidationErrors.STRING_FORMAT) })
+  @IsNotEmpty({ message: i18nValidationMessage(ValidationErrors.NOT_EMPTY) })
+  @ApiProperty()
+  knowledge_group_name: string
+
+  @IsString({ message: i18nValidationMessage(ValidationErrors.STRING_FORMAT) })
+  @IsOptional()
+  @ApiProperty({ required: false })
+  permission?: string
+
+  @IsInt({ message: i18nValidationMessage(ValidationErrors.NUMBER_FORMAT) })
+  @IsOptional()
+  @ApiProperty({ required: false })
+  parent_group_id?: number
+}
+```
+
+### `update.dto.ts`
+
+```typescript
+import { ApiProperty, PartialType } from '@nestjs/swagger'
+import { CreateKnowledgeGroupDto } from './create.dto'
+import { IsInt, IsNotEmpty } from 'class-validator'
+import { i18nValidationMessage } from 'nestjs-i18n'
+import { ValidationErrors } from 'nestjs-typeorm-shared'
+
+export class UpdateKnowledgeGroupDto extends PartialType(CreateKnowledgeGroupDto) {
+  @IsInt({ message: i18nValidationMessage(ValidationErrors.NUMBER_FORMAT) })
+  @IsNotEmpty({ message: i18nValidationMessage(ValidationErrors.NOT_EMPTY) })
+  @ApiProperty()
+  knowledge_group_id: number
+}
+```
+
+### `params.dto.ts`
+
+```typescript
+import { KnowledgeGroupUniqueParams } from '@generated/knowledge_group/filter'
+import { ApiProperty } from '@nestjs/swagger'
+import { Transform } from 'class-transformer'
+import { IsInt, IsNotEmpty } from 'class-validator'
+import { i18nValidationMessage } from 'nestjs-i18n'
+import { ValidationErrors } from 'nestjs-typeorm-shared'
+
+export class KnowledgeGroupUniqueParamsDto implements KnowledgeGroupUniqueParams {
+  @IsInt({ message: i18nValidationMessage(ValidationErrors.NUMBER_FORMAT) })
+  @Transform((v) => Number(v.value))
+  @IsNotEmpty({ message: i18nValidationMessage(ValidationErrors.NOT_EMPTY) })
+  @ApiProperty()
+  knowledge_group_id: number
+}
+```

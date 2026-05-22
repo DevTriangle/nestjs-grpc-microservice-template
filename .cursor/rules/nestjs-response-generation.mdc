@@ -29,12 +29,12 @@ Use this as the canonical pattern when creating or updating `response/*.response
 ## Golden example (order-category)
 
 ```typescript
-import { PaginationResponse } from '@common/classes/pagination'
-import { StatusResponse } from '@common/classes/status'
+import { PaginationResponse } from 'nestjs-typeorm-shared'
+import { StatusResponse } from 'nestjs-typeorm-shared'
 import { ApiProperty } from '@nestjs/swagger'
-import { BaseResponse } from '@common/classes/response'
+import { BaseEntityResponse } from 'nestjs-typeorm-shared'
 
-export class OrderCategoryResponse extends BaseResponse {
+export class OrderCategoryResponse extends BaseEntityResponse {
   @ApiProperty()
   category_id: number
 
