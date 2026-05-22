@@ -3,11 +3,10 @@ import { AppModule } from './modules/app/app.module'
 import { MicroserviceOptions, Transport } from '@nestjs/microservices'
 import { BadRequestException, ValidationError, ValidationPipe } from '@nestjs/common'
 import { ReflectionService } from '@grpc/reflection'
-import { join } from 'path'
 import { AppLogger, formatErrors, getInitProtoFiles } from 'nestjs-typeorm-shared'
 
 async function bootstrap(): Promise<void> {
-  const [packages, protoPath] = getInitProtoFiles({
+  const { packages, protoPaths, includeDir } = getInitProtoFiles({
     dirPath: './libs/asur-task-shared-types/src/proto/',
   })
 
@@ -16,7 +15,7 @@ async function bootstrap(): Promise<void> {
     transport: Transport.GRPC,
     options: {
       package: packages,
-      protoPath: protoPath,
+      protoPath: protoPaths,
       url: process.env.GRPC_HOST,
       loader: {
         keepCase: true,
@@ -24,7 +23,7 @@ async function bootstrap(): Promise<void> {
         enums: String,
         defaults: true,
         oneofs: true,
-        includeDirs: [join(__dirname, 'libs/asur-task-shared-types/src/proto')],
+        includeDirs: [includeDir],
       },
       onLoadPackageDefinition: (pkg, server) => {
         new ReflectionService(pkg).addToServer(server)
