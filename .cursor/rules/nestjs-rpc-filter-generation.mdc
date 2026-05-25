@@ -86,7 +86,7 @@ message KnowledgeGroupFilter {
 ### `filters/knowledge-group.filter.ts`
 
 ```typescript
-import { KnowledgeGroupFilter, KnowledgeGroupFilters, KnowledgeGroupSorts } from '@generated/knowledge_group/filter'
+import { KnowledgeGroupFilter, KnowledgeGroupFilters, KnowledgeGroupSorts } from '../../../knowledge_group/filter'
 import { ApiProperty } from '@nestjs/swagger'
 import { BaseFilter, BaseFilters, BaseSorts, IsSortOrder, SortOrders, ValidationErrors } from 'nestjs-typeorm-shared'
 import { IsInt, IsOptional, IsString, ValidateNested } from 'class-validator'

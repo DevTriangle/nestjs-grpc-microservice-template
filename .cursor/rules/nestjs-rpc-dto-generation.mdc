@@ -10,25 +10,26 @@ Use this when creating or updating `dto/*.dto.ts` under `src/libs/<lib_name>/src
 
 ## Source of truth
 
-- **`create.dto.ts` / `update.dto.ts`**: read fields from `src/libs/<lib_name>/src/proto/<module>/manage.proto` message `{Entity}Request`.
+- **`create.dto.ts`**: read fields from `src/libs/<lib_name>/src/proto/<module>/manage.proto` message `Create{Entity}Request`. If there are base requests then add them in `create.dto.ts`.
+- **`update.dto.ts`**: read fields from `src/libs/<lib_name>/src/proto/<module>/manage.proto` message `Update{Entity}Request`.
 - **`params.dto.ts`**: read fields from `src/libs/<lib_name>/src/proto/<module>/filter.proto` message `{Entity}UniqueParams`.
 - Import generated types from `@generated/<module>/manage` and `@generated/<module>/filter`.
 - Proto package folder uses snake_case (`knowledge_group`); class folder uses kebab-case (`knowledge-group`).
 
 ## Required files
 
-| File            | Class                     | Implements                                             |
-| --------------- | ------------------------- | ------------------------------------------------------ |
-| `create.dto.ts` | `Create{Entity}Dto`       | `{Entity}Request`                                      |
-| `update.dto.ts` | `Update{Entity}Dto`       | extends `PartialType(Create{Entity}Dto)` + primary key |
-| `params.dto.ts` | `{Entity}UniqueParamsDto` | `{Entity}UniqueParams`                                 |
+| File            | Class                     | Implements                                                                                  |
+| --------------- | ------------------------- | ------------------------------------------------------------------------------------------- |
+| `create.dto.ts` | `Create{Entity}Dto`       | `Create{Entity}Request`                                                                     |
+| `update.dto.ts` | `Update{Entity}Dto`       | extends `PartialType(Create{Entity}Dto)` + primary key + implements `Update{Entity}Request` |
+| `params.dto.ts` | `{Entity}UniqueParamsDto` | `{Entity}UniqueParams`                                                                      |
 
 ## Field rules
 
 - Map proto field names to TypeScript **as-is** (snake_case).
-- **`create.dto.ts`**: include all `{Entity}Request` fields needed for create; **exclude** the primary id field (used only in update).
+- **`create.dto.ts`**: include all `Create{Entity}Request` fields needed for create; **exclude** the primary id field (used only in update).
 - Mark business-required create fields with `@IsNotEmpty`; proto `optional` fields use `@IsOptional` and `@ApiProperty({ required: false })`.
-- **`update.dto.ts`**: `extends PartialType(Create{Entity}Dto)`; add primary id from `{Entity}Request` as required (`@IsInt` + `@IsNotEmpty` for numeric ids).
+- **`update.dto.ts`**: `extends PartialType(Create{Entity}Dto) implements Update{Entity}Request`; add primary id from `Create{Entity}Request` as required (`@IsInt` + `@IsNotEmpty` for numeric ids). If there are omitted fields from `Create{Entity}Request` then use `OmitType(<class>, [...fields])` or `PickType(<class>, [...fields])` from `@nestjs/swagger`
 - **`params.dto.ts`**: one field per `{Entity}UniqueParams`; add `@Transform((v) => Number(v.value))` for numeric query params.
 
 ## Imports
@@ -36,67 +37,111 @@ Use this when creating or updating `dto/*.dto.ts` under `src/libs/<lib_name>/src
 - `ValidationErrors` from `../../../constants/errors` in `create.dto.ts`; from `nestjs-typeorm-shared` in `update.dto.ts` and `params.dto.ts`.
 - `class-validator`, `nestjs-i18n`, `@nestjs/swagger` (`ApiProperty`, `PartialType`), `class-transformer` (`Transform`) in `params.dto.ts`.
 
-## Golden example (`knowledge_group` → `knowledge-group`)
+## Golden example (`knowledge_test` → `knowledge-test`)
 
 Proto (`manage.proto`):
 
 ```protobuf
-message KnowledgeGroupRequest {
-  optional int32 knowledge_group_id = 1;
-  optional string knowledge_group_name = 2;
-  optional string permission = 3;
-  optional int32 parent_group_id = 4;
+// DTO для теста знаний (KnowledgeTest)
+message CreateKnowledgeTestRequest {
+  string knowledge_test_name = 2; // Название теста знаний
+  optional string knowledge_uuid = 3; // UUID знания
+  KnowledgeTestQuestions questions = 4; // Вопросы теста знаний
+  optional KnowledgeTestRoleIds role_ids = 5;  // ID ролей
+}
+
+// DTO для обновления теста знаний (KnowledgeTest)
+message UpdateKnowledgeTestRequest {
+  string knowledge_test_uuid = 1; // UUID теста знаний
+  optional string knowledge_test_name = 2; // Название теста знаний
+  optional string knowledge_uuid = 3; // UUID знания
+  optional KnowledgeTestQuestions questions = 4; // Вопросы теста знаний
+  optional KnowledgeTestRoleIds role_ids = 5;  // ID ролей
+}
+
+// DTO для вопросов теста знаний
+message KnowledgeTestQuestions {
+  repeated KnowledgeTestQuestion values = 1; // Вопросы теста знаний
+}
+
+// DTO для списка ID ролей
+message KnowledgeTestRoleIds {
+  repeated int32 values = 1; // ID ролей
 }
 ```
 
 ### `create.dto.ts`
 
 ```typescript
-import { ValidationErrors } from '../../../constants/errors'
-import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator'
-import { i18nValidationMessage } from 'nestjs-i18n'
 import { ApiProperty } from '@nestjs/swagger'
-import { KnowledgeGroupRequest } from '@generated/knowledge_group/manage'
+import { Type } from 'class-transformer'
+import { IsArray, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator'
+import { i18nValidationMessage } from 'nestjs-i18n'
+import { ValidationErrors } from '../../../constants/errors'
+import { KnowledgeTestQuestionDto } from './question.dto'
+import {
+  CreateKnowledgeTestRequest,
+  KnowledgeTestQuestions,
+  KnowledgeTestRoleIds,
+} from '../../../generated/knowledge_test/manage'
 
-export class CreateKnowledgeGroupDto implements KnowledgeGroupRequest {
+export class KnowledgeTestQuestionsDto implements KnowledgeTestQuestions {
+  @ValidateNested({ each: true })
+  @Type(() => KnowledgeTestQuestionDto)
+  @IsArray({ message: i18nValidationMessage(ValidationErrors.ARRAY_FORMAT) })
+  @IsNotEmpty({ message: i18nValidationMessage(ValidationErrors.NOT_EMPTY) })
+  @ApiProperty({ isArray: true, type: () => KnowledgeTestQuestionDto })
+  values: KnowledgeTestQuestionDto[]
+}
+
+export class KnowledgeTestRoleIdsDto implements KnowledgeTestRoleIds {
+  @IsInt({ each: true, message: i18nValidationMessage(ValidationErrors.NUMBER_FORMAT) })
+  @IsArray({ message: i18nValidationMessage(ValidationErrors.ARRAY_FORMAT) })
+  @IsNotEmpty({ message: i18nValidationMessage(ValidationErrors.NOT_EMPTY) })
+  @ApiProperty({ isArray: true, type: Number })
+  values: number[]
+}
+
+export class CreateKnowledgeTestDto implements CreateKnowledgeTestRequest {
   @IsString({ message: i18nValidationMessage(ValidationErrors.STRING_FORMAT) })
   @IsNotEmpty({ message: i18nValidationMessage(ValidationErrors.NOT_EMPTY) })
   @ApiProperty()
-  knowledge_group_name: string
+  knowledge_test_name: string
 
-  @IsString({ message: i18nValidationMessage(ValidationErrors.STRING_FORMAT) })
+  @IsUUID('all', { message: i18nValidationMessage(ValidationErrors.UUID_FORMAT) })
   @IsOptional()
   @ApiProperty({ required: false })
-  permission?: string
+  knowledge_uuid?: string
 
-  @IsInt({ message: i18nValidationMessage(ValidationErrors.NUMBER_FORMAT) })
-  @IsOptional()
-  @ApiProperty({ required: false })
-  parent_group_id?: number
+  @ValidateNested()
+  @Type(() => KnowledgeTestQuestionsDto)
+  @IsNotEmpty({ message: i18nValidationMessage(ValidationErrors.NOT_EMPTY) })
+  @ApiProperty({ required: false, type: () => KnowledgeTestQuestionsDto })
+  questions: KnowledgeTestQuestionsDto
+
+  @ValidateNested()
+  @Type(() => KnowledgeTestRoleIdsDto)
+  @IsNotEmpty({ message: i18nValidationMessage(ValidationErrors.NOT_EMPTY) })
+  @ApiProperty({ required: false, type: () => KnowledgeTestRoleIdsDto })
+  role_ids: KnowledgeTestRoleIdsDto
 }
 ```
 
 ### `update.dto.ts`
 
 ```typescript
-import { ApiProperty, PartialType } from '@nestjs/swagger'
-import { CreateKnowledgeGroupDto } from './create.dto'
-import { IsInt, IsNotEmpty } from 'class-validator'
-import { i18nValidationMessage } from 'nestjs-i18n'
-import { ValidationErrors } from 'nestjs-typeorm-shared'
-
-export class UpdateKnowledgeGroupDto extends PartialType(CreateKnowledgeGroupDto) {
-  @IsInt({ message: i18nValidationMessage(ValidationErrors.NUMBER_FORMAT) })
+export class UpdateKnowledgeTestDto extends PartialType(CreateKnowledgeTestDto) implements UpdateKnowledgeTestRequest {
+  @IsUUID('all', { message: i18nValidationMessage(ValidationErrors.UUID_FORMAT) })
   @IsNotEmpty({ message: i18nValidationMessage(ValidationErrors.NOT_EMPTY) })
   @ApiProperty()
-  knowledge_group_id: number
+  knowledge_test_uuid: string
 }
 ```
 
 ### `params.dto.ts`
 
 ```typescript
-import { KnowledgeGroupUniqueParams } from '@generated/knowledge_group/filter'
+import { KnowledgeGroupUniqueParams } from '../../../knowledge_group/filter'
 import { ApiProperty } from '@nestjs/swagger'
 import { Transform } from 'class-transformer'
 import { IsInt, IsNotEmpty } from 'class-validator'

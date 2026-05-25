@@ -10,7 +10,7 @@ When adding or editing protos. One folder per module, **four files** with fixed 
 
 ## Files (required split)
 
-- `manage.proto` Write create/update/other DTO: `{Entity}Request`. Take data from given module in request.
+- `manage.proto` Write create/update/other DTO: `Create{Entity}Request` / `Update{Entity}Request`. Take data from given module in request.
 - `filter.proto` Write filters for the entity from given module in request: `{Entity}Sorts`, `{Entity}Filters`, `{Entity}Filter`.
 - `model.proto` Write entity model from given module in request: `{Entity}Model`.
 - `service.proto` Write rpc requests (in nestjs api controllers): `service {Entity}Service`, imports **`common/model.proto`**, **`{module}/filter.proto`**, **`{module}/manage.proto`**, **`{module}/model.proto`** in that order.
@@ -19,7 +19,7 @@ When adding or editing protos. One folder per module, **four files** with fixed 
 
 - **`syntax = "proto3";`** and **`package`** equals the directory name (`order`, `parent_task`, `order_status`, …).
 - **Imports**: path from proto root, e.g. `"common/model.proto"`, `"order/model.proto"`. No leading slash.
-- **Service RPCs** (align with `order` unless product requires fewer): `Create({Entity}Request) → Status{Entity}Response`, `FindAll({Entity}Filter) → Array{Entity}Response`, `GetOne(common.FindUniqueRequest) → {Entity}Model`, `Update({Entity}Request) → common.StatusResponse`.
+- **Service RPCs** (align with `order` unless product requires fewer): `Create(Create{Entity}Request) → Status{Entity}Response`, `FindAll({Entity}Filter) → Array{Entity}Response`, `GetOne(common.FindUniqueRequest) → {Entity}Model`, `Update(Update{Entity}Request) → common.StatusResponse`.
 - **Comments**: Russian brief description above `service`, RPCs, and main messages (same style as existing protos).
 - **Field numbers**: unique per message, sequential from 1.
 - **Field order**: the most important and used fields must be first.
@@ -34,6 +34,19 @@ syntax = "proto3";
 package order;
 
 import "google/protobuf/timestamp.proto";
+
+// DTO для создания задачи (Order)
+message OrderRequest {
+  optional string task_id = 2;
+  string order_type_prefix = 3;
+  string order_name = 4;
+  optional string order_description = 5;
+  int32 category_id = 6;
+  optional string executor_id = 7;
+  string facility_id = 8;
+  google.protobuf.Timestamp date_start = 9;
+  google.protobuf.Timestamp date_end = 10;
+}
 
 // DTO для задачи (Order)
 message OrderRequest {
@@ -146,7 +159,7 @@ import "order/model.proto";
 // Сервис задач (Order)
 service OrderService {
   // Создание задач
-  rpc Create(OrderRequest) returns (StatusOrderResponse) {}
+  rpc Create(CreateOrderRequest) returns (StatusOrderResponse) {}
 
   // Получение списка задач
   rpc FindAll(OrderFilter) returns (ArrayOrderResponse) {}
@@ -155,6 +168,6 @@ service OrderService {
   rpc GetOne(common.FindUniqueRequest) returns (OrderModel) {}
 
   // Изменение задач
-  rpc Update(OrderRequest) returns (common.StatusResponse) {}
+  rpc Update(UpdateOrderRequest) returns (common.StatusResponse) {}
 }
 ```
