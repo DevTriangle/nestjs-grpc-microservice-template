@@ -38,7 +38,6 @@ async function bootstrap(): Promise<void> {
         enableImplicitConversion: true,
       },
       whitelist: true,
-      forbidNonWhitelisted: true,
       forbidUnknownValues: true,
       exceptionFactory: (validationErrors: ValidationError[] = []): BadRequestException => {
         try {
