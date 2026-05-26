@@ -16,11 +16,23 @@ When creating or updating an entity file, follow this exact structure. Do not in
 - Entity class must extend `BaseModel`.
 - Use explicit decorators for every field (`@PrimaryColumn`, `@Column`, `@ManyToOne`, `@OneToMany`, `@JoinColumn`).
 - For FK scalar fields, define `@Column({ foreignKeyConstraintName: 'FK_...' })` and matching `@JoinColumn` on relation.
+- Add the query builder for the entity repository in `<module>/query-builders/<entity>.qb.ts`.
 - Add `@Injectable()` repository in the same file.
 - Repository must extend `Repository<EntityName>`, call `super(EntityName, dataSource.createEntityManager())`, and override `createQueryBuilder` to return typed query-builder.
 - Primary column is increment for reference/enum tables and uuid v7 (`@PrimaryColumn({ type: 'uuid', default: () => UUIDV7_FUNC })`) for other.
 
 ## Golden example (copy this shape)
+
+`example.qb.ts`
+
+```typescript
+import { AppQueryBuilder } from '@common/utils/query/query-builder/base-query-builder'
+import { Example } from '../entities/example.entity'
+
+export class ExampleQueryBuilder extends AppQueryBuilder<Example> {}
+```
+
+`example.entity.ts`
 
 ```typescript
 import {BaseModel} from 'nestjs-typeorm-shared'
